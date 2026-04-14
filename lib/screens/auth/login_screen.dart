@@ -26,6 +26,24 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // ── Error classification ─────────────────────────────────────────────────
+
+  /// Returns true when [e] signals that the account exists but the email
+  /// address hasn't been confirmed yet.
+  ///
+  /// Matching strategy (adjust once the exact API contract is confirmed):
+  ///   • HTTP 403  — many APIs use Forbidden for "authenticated but blocked"
+  ///   • HTTP 401 + message contains "verif" or "confirm"
+  ///     (covers: "Email not verified", "Please confirm your email", etc.)
+  ///
+  /// TODO: replace with a specific error code from the backend once available,
+  ///       e.g. `e.errorCode == 'EMAIL_NOT_VERIFIED'`.
+  bool _isUnverifiedEmailError(ApiException e) {
+    if (e.statusCode == 403) return true;
+    final msg = e.message.toLowerCase();
+    return msg.contains('verif') || msg.contains('confirm');
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -37,16 +55,29 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (mounted) {
         final route = resp.user.onboardingCompleted
-            ? '/' // TODO: replace with home route once it exists
+            ? '/home'
             : '/onboarding/interese';
         Navigator.pushReplacementNamed(context, route);
       }
     } on ApiException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
+      if (!mounted) return;
+
+      // ── Email not yet verified ─────────────────────────────────────────
+      // Route to the dedicated screen so the user can resend the link.
+      // TODO: align the exact statusCode / message key with the backend team.
+      if (_isUnverifiedEmailError(e)) {
+        Navigator.pushNamed(
+          context,
+          '/unverified-email',
+          arguments: _emailController.text.trim(),
         );
+        return;
       }
+
+      // ── Generic auth error ─────────────────────────────────────────────
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'theme/theme.dart';
 import 'screens/auth/auth.dart';
 import 'screens/onboarding/onboarding.dart';
+import 'screens/home/home.dart';
+import 'screens/splash/splash_screen.dart';
 
 void main() {
   runApp(const BabyMamaApp());
@@ -26,12 +28,33 @@ class BabyMamaApp extends StatelessWidget {
         Locale('ro'),
         Locale('en'),
       ],
-      initialRoute: '/',
+      initialRoute: '/splash',
       routes: {
+        // Splash — auth gate, always the first screen shown
+        '/splash': (_) => const SplashScreen(),
+
         // Auth
         '/':       (_) => const WelcomeScreen(),
         '/signup': (_) => const SignUpScreen(),
         '/login':  (_) => const LoginScreen(),
+        '/check-email': (ctx) {
+          final email =
+              ModalRoute.of(ctx)!.settings.arguments as String? ?? '';
+          return CheckEmailScreen(email: email);
+        },
+        '/unverified-email': (ctx) {
+          final email =
+              ModalRoute.of(ctx)!.settings.arguments as String? ?? '';
+          return UnverifiedEmailScreen(email: email);
+        },
+        '/email-verified': (ctx) {
+          final email =
+              ModalRoute.of(ctx)!.settings.arguments as String?;
+          return EmailVerifiedScreen(email: email);
+        },
+
+        // Home
+        '/home': (_) => const HomeScreen(),
 
         // Onboarding
         '/onboarding/interese':   (_) => const OnboardingIntereseScreen(),

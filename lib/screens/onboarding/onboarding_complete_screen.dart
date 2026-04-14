@@ -149,7 +149,7 @@ class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen>
                     position: _ctaSlide,
                     child: _CtaBar(onPressed: () {
                       Navigator.pushNamedAndRemoveUntil(
-                          context, '/', (_) => false);
+                          context, '/home', (_) => false);
                     }),
                   ),
                 ),

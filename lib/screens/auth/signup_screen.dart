@@ -41,7 +41,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         fullName: _nameController.text.trim(),
       );
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/onboarding/interese');
+        Navigator.pushReplacementNamed(
+          context,
+          '/check-email',
+          arguments: _emailController.text.trim(),
+        );
       }
     } on ApiException catch (e) {
       if (mounted) {

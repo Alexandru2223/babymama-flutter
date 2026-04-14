@@ -35,7 +35,7 @@ flutter pub get
 
 ## Architecture
 
-Flutter multi-platform app (Android, iOS, macOS, Linux, Windows, Web) targeting Romanian-speaking mothers.
+Flutter multi-platform app (Android, iOS, macOS, Linux, Windows, Web) for Romanian-speaking mothers of newborns and infants. Features: baby activity tracking (sleep, feeding, diapers), age-matched development insights, parenting tips, and community discussion previews.
 
 ```
 lib/
@@ -51,13 +51,28 @@ lib/
 │   ├── progress_header.dart         # ProgressHeader (step bar + back button + title)
 │   ├── selectable_card.dart         # SelectableCard (emoji + title + subtitle, toggle)
 │   └── chip_selector.dart           # ChipSelector
+├── services/
+│   ├── services.dart                # Barrel export + lazy singletons (no DI framework)
+│   ├── api_client.dart              # HTTP client; base URL 10.0.2.2:3000 (Android emulator);
+│   │                                #   auto-refreshes access token on 401
+│   ├── storage_service.dart         # flutter_secure_storage: tokens + active baby ID
+│   ├── auth_service.dart            # register / login / logout / email verification
+│   ├── onboarding_service.dart      # save preferences / create baby / complete onboarding
+│   └── home_repository.dart         # fetch home screen payload
 └── screens/
+    ├── splash/
+    │   └── splash_screen.dart       # Route: /splash — auth gate (token check → home or welcome)
     ├── auth/
     │   ├── auth.dart                # Barrel export
     │   ├── welcome_screen.dart      # Route: /
     │   ├── signup_screen.dart       # Route: /signup
     │   ├── login_screen.dart        # Route: /login
+    │   ├── check_email_screen.dart  # Route: /check-email (post-register prompt)
+    │   ├── unverified_email_screen.dart  # Route: /unverified-email
+    │   ├── email_verified_screen.dart    # Route: /email-verified
     │   └── _auth_widgets.dart       # AuthBackButton, SwitchAuthRow
+    ├── home/
+    │   └── home_screen.dart         # Route: /home — main screen after auth/onboarding
     └── onboarding/
         ├── onboarding.dart          # Barrel export
         ├── _onboarding_widgets.dart # OnboardingBottomAction (shared CTA bar)
@@ -73,9 +88,14 @@ lib/
 
 | Route                   | Screen                         | Notes                                    |
 |-------------------------|--------------------------------|------------------------------------------|
-| `/`                     | `WelcomeScreen`                | App entry                                |
-| `/signup`               | `SignUpScreen`                 | → `/onboarding/interese` after success   |
-| `/login`                | `LoginScreen`                  | → home after success (TODO)              |
+| `/splash`               | `SplashScreen`                 | Auth gate — always the initial route     |
+| `/`                     | `WelcomeScreen`                | Landing (unauthenticated)                |
+| `/signup`               | `SignUpScreen`                 | → `/check-email` after register          |
+| `/login`                | `LoginScreen`                  | → `/home` or `/onboarding/interese`      |
+| `/check-email`          | `CheckEmailScreen`             | Post-register prompt; passes email as arg |
+| `/unverified-email`     | `UnverifiedEmailScreen`        | Shown on login if email not verified     |
+| `/email-verified`       | `EmailVerifiedScreen`          | Deep-link landing after email click      |
+| `/home`                 | `HomeScreen`                   | Main screen post-auth                    |
 | `/onboarding/interese`  | `OnboardingIntereseScreen`     | Step 1 — requires ≥1 selection           |
 | `/onboarding/baby`      | `OnboardingBabyScreen`         | Step 2 — name + birthdate required       |
 | `/onboarding/tracking`  | `OnboardingTrackingScreen`     | Step 3 — requires ≥1 selection           |
@@ -131,12 +151,15 @@ class OnboardingCompletionData {
 - Selected state in onboarding uses `Set<String>` with value keys (e.g. `'alaptare'`, `'somn'`).
 - Animated selection feedback uses `AnimatedContainer` + `Material`/`InkWell` — no external animation packages.
 - Entrance animations (completion screen) use a single `AnimationController` with staggered `Interval` curves.
-- All backend calls are stubbed with `Future.delayed` + `TODO: connect backend` comments.
+- All backend calls go through `ApiClient` from `lib/services/`. Every screen that touches the API imports from `../../services/services.dart` and catches `ApiException` for error display.
 
 ## Stack
 
 - Flutter (Dart SDK ^3.11.4)
 - Material 3 (`useMaterial3: true`)
+- `http: ^1.2.2` — HTTP client used by `ApiClient`
+- `flutter_secure_storage: ^9.2.2` — encrypted token storage
+- `flutter_localizations` — Romanian (`ro`) primary locale, English fallback
 - `cupertino_icons: ^1.0.8`
-- No state management library yet
-- No backend / API integration yet
+- No state management library — local `setState` only
+- `google_fonts` is planned but not yet added to `pubspec.yaml`; font families are referenced as plain strings in the theme
